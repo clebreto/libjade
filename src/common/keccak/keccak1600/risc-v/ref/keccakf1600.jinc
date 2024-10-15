@@ -92,8 +92,11 @@ inline fn __ROL_64_L(reg u32 h l, inline int r) -> reg u32, reg u32
   x = l;
   y = h << r;
   l = l << r;
-  l = l | (h >> (32-r));
-  h = y | (x >> (32-r));
+  reg u32 temp;
+  temp = (h >> (32-r));
+  l = l | temp;
+  temp = (x >> (32-r));
+  h = y | temp;
 
   return h, l;
 }
@@ -239,9 +242,12 @@ inline fn __set_row_ref(
     x2 = (x + 2) % 5;
 
     //t  = !b[x1] & b[x2];
-    t0 = #BIC(b[2*x2+0], b[2*x1+0]);
-    t1 = #BIC(b[2*x2+1], b[2*x1+1]);
-
+    // t0 = #BIC(b[2*x2+0], b[2*x1+0]); // ARM
+    t0 = !b[2*x1+0]; // RISCV NO
+    t0 = t0 & b[2*x2+0]; // RISCV AND
+    // t1 = #BIC(b[2*x2+1], b[2*x1+1]); // ARM
+    t1 = !b[2*x1+1]; // RISCV NOT
+    t1 = t1 & b[2*x2+1]; //RISCV AND
     t0 ^= b[2*x+0];
     t1 ^= b[2*x+1];
 
@@ -330,7 +336,10 @@ inline fn __keccakf1600_ref(reg ptr u32[25*2] a) -> reg ptr u32[25*2]
   RC_s = RC;
 
   c = 0;
-  while (c < KECCAK_ROUNDS*2)
+  reg u32 keccak_roundsx2;
+  keccak_roundsx2 = KECCAK_ROUNDS*2;
+
+  while (c < keccak_roundsx2)
   {
     rc1, rc0, c = __get_RC(RC_s, c); c_s = c;
     e = _round_ref(e, a, rc0, rc1);
